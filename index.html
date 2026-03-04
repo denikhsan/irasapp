@@ -137,6 +137,9 @@
                                 <th class="px-4 py-4 sort-header" onclick="handleSort('info')">
                                     <div class="flex items-center gap-2">Jenis <i class="fa-solid fa-sort text-gray-300"></i></div>
                                 </th>
+                                <th class="px-4 py-4 sort-header text-center" onclick="handleSort('tgl_beli')">
+                                    <div class="flex items-center justify-center gap-2">Tgl Beli <i class="fa-solid fa-sort text-gray-300"></i></div>
+                                </th>
                                 <th class="px-4 py-4 sort-header text-right" onclick="handleSort('berat')">
                                     <div class="flex items-center justify-end gap-2">Berat <i class="fa-solid fa-sort text-gray-300"></i></div>
                                 </th>
@@ -517,6 +520,9 @@
                         <td class="px-4 py-4">
                             <span class="text-[10px] font-semibold text-pink-600 px-2 py-1 bg-pink-50 rounded-md border border-pink-100">${item.info}</span>
                         </td>
+                        <td class="px-4 py-4 text-center">
+                            <div class="text-xs font-medium text-gray-600">${item.tgl_beli}</div>
+                        </td>
                         <td class="px-4 py-4 font-bold text-purple-700 text-right">${beratItem} KG</td>
                         <td class="px-6 py-4 font-bold text-gray-700 text-right">${formatRupiah(hargaItem)}</td>
                         <td class="px-6 py-4 text-center">
@@ -529,7 +535,6 @@
                                 <div class="flex items-center gap-1.5 px-3 py-1 rounded-full w-fit ${statusBg} ${statusColor}">
                                     <span class="text-[10px] font-black uppercase tracking-wider">${item.status}</span>
                                 </div>
-                                <!-- INDIKATOR PERINGATAN (KEMBALI) -->
                                 ${isOverdue ? '<i class="fa-solid fa-circle-exclamation text-red-600 animate-pulse"></i>' : ''}
                                 ${isDueToday ? '<i class="fa-solid fa-bell text-amber-500 animate-bounce"></i>' : ''}
                             </div>

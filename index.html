@@ -78,7 +78,7 @@
             <!-- Header Section -->
             <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
                 <div>
-                    <h1 class="text-3xl font-bold text-pink-600 flex items-center">
+                    <h1 class="text-3xl font-bold text-pink-600 flex items-center cursor-pointer" onclick="resetFilter()">
                         Ira's App <i class="fa-solid fa-heart ml-2 text-2xl"></i>
                     </h1>
                     <p class="text-gray-500 text-sm font-medium">Sistem Data Piutang oleh Ira</p>
@@ -100,7 +100,7 @@
 
             <!-- Dashboard Stats -->
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500 flex flex-col justify-center">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500 flex flex-col justify-center cursor-pointer hover:bg-blue-50 transition" onclick="resetFilter()">
                     <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Piutang Aktif</p>
                     <h2 id="stats-total" class="text-2xl font-black mt-1">0</h2>
                 </div>
@@ -112,15 +112,20 @@
                     <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Berat (KG)</p>
                     <h2 id="stats-weight" class="text-xl font-black mt-1 text-purple-600">0 KG</h2>
                 </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-red-500 flex flex-col justify-center">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-red-500 flex flex-col justify-center cursor-pointer hover:bg-red-50 transition" onclick="setFilter('urgent')">
                     <p class="text-[10px] text-gray-400 font-black uppercase tracking-widest">Urgent (≤3 Hari)</p>
                     <h2 id="stats-warning" class="text-2xl font-black mt-1 text-red-600">0</h2>
                 </div>
             </div>
 
-            <!-- Alerts -->
+            <!-- Alerts / Banners -->
             <div class="space-y-3 mb-8">
-                <div id="overdue-alert" class="hidden bg-red-600 text-white p-4 rounded-2xl shadow-lg flex items-center justify-between border-2 border-red-400">
+                <div id="filter-info" class="hidden bg-gray-200 text-gray-700 p-3 rounded-xl flex items-center justify-between px-5">
+                    <p class="text-xs font-bold"><i class="fa-solid fa-filter mr-2"></i> Menampilkan hasil filter: <span id="filter-name" class="text-pink-600 uppercase"></span></p>
+                    <button onclick="resetFilter()" class="text-xs font-black text-gray-500 hover:text-gray-800 uppercase tracking-tighter">Hapus Filter</button>
+                </div>
+
+                <div id="overdue-alert" onclick="setFilter('overdue')" class="hidden cursor-pointer hover:scale-[1.01] transition-transform bg-red-600 text-white p-4 rounded-2xl shadow-lg flex items-center justify-between border-2 border-red-400">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-calendar-xmark text-xl"></i>
                         <div>
@@ -128,9 +133,10 @@
                             <p class="text-xs font-bold"><span id="overdue-count">0</span> Faktur Tertunggak (<span id="overdue-value">Rp 0</span>)</p>
                         </div>
                     </div>
+                    <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
                 </div>
 
-                <div id="today-due-alert" class="hidden bg-amber-400 text-amber-950 p-4 rounded-2xl shadow-lg flex items-center justify-between border-2 border-amber-300 animate-bounce-subtle">
+                <div id="today-due-alert" onclick="setFilter('today')" class="hidden cursor-pointer hover:scale-[1.01] transition-transform bg-amber-400 text-amber-950 p-4 rounded-2xl shadow-lg flex items-center justify-between border-2 border-amber-300 animate-bounce-subtle">
                     <div class="flex items-center gap-3">
                         <i class="fa-solid fa-bell-exclamation text-xl"></i>
                         <div>
@@ -138,6 +144,7 @@
                             <p class="text-xs font-bold"><span id="today-count">0</span> Faktur harus ditagih (<span id="today-value">Rp 0</span>)</p>
                         </div>
                     </div>
+                    <i class="fa-solid fa-chevron-right text-xs opacity-50"></i>
                 </div>
             </div>
 
@@ -166,14 +173,14 @@
                 </div>
                 <div id="empty-state" class="hidden py-20 text-center px-4">
                     <i class="fa-solid fa-folder-open text-5xl text-gray-200 mb-4 block"></i>
-                    <h3 class="text-gray-500 font-bold">Database Kosong</h3>
-                    <p class="text-gray-400 text-xs mt-1">Gunakan tombol di atas untuk menambah data.</p>
+                    <h3 class="text-gray-500 font-bold">Tidak ada data</h3>
+                    <p class="text-gray-400 text-xs mt-1">Gunakan tombol di atas atau hapus filter untuk melihat data.</p>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Bulk Actions (Mobile Optimized) -->
+    <!-- Bulk Actions -->
     <div id="bulk-bar" class="fixed bottom-4 left-4 right-4 z-40 bg-gray-900 text-white rounded-2xl shadow-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bulk-actions-bar translate-y-48 opacity-0">
         <div class="flex items-center gap-3">
             <span id="selected-count" class="bg-pink-600 px-3 py-1 rounded-full text-[10px] font-black">0</span>
@@ -186,7 +193,7 @@
         </div>
     </div>
 
-    <!-- Modal Form (Mobile Optimized) -->
+    <!-- Modal Form -->
     <div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -259,6 +266,7 @@
         let dataPiutang = [];
         let selectedIds = new Set();
         let currentSort = { column: 'tgl_tempo', direction: 'asc' };
+        let currentFilter = 'all'; // 'all', 'overdue', 'today', 'urgent'
 
         window.onload = function() {
             dataPiutang = JSON.parse(localStorage.getItem('ira_app_data')) || [];
@@ -273,6 +281,17 @@
         function handleSort(col) {
             if (currentSort.column === col) currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
             else { currentSort.column = col; currentSort.direction = 'asc'; }
+            renderTable();
+        }
+
+        function setFilter(type) {
+            currentFilter = type;
+            renderTable();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetFilter() {
+            currentFilter = 'all';
             renderTable();
         }
 
@@ -361,17 +380,79 @@
         function renderTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
-            const today = new Date().toISOString().split('T')[0];
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayDate = new Date(todayStr);
 
+            // Calculation and Global Stats (based on ALL data)
             let sTotal = 0, sValue = 0, sWeight = 0, sWarning = 0;
             let overdueC = 0, overdueV = 0, todayC = 0, todayV = 0;
 
-            if(dataPiutang.length === 0) {
+            dataPiutang.forEach(item => {
+                const isLunas = item.status === 'Lunas';
+                const itemDate = new Date(item.tgl_tempo);
+                const diff = Math.ceil((itemDate - todayDate) / (1000*60*60*24));
+                
+                if(!isLunas) {
+                    sTotal++; sValue += item.harga; sWeight += item.berat;
+                    if(diff <= 3 && diff > 0) sWarning++;
+                    if(diff === 0) { todayC++; todayV += item.harga; }
+                    if(diff < 0) { overdueC++; overdueV += item.harga; }
+                }
+            });
+
+            // Update Banners Visibility (Always based on actual counts)
+            const overdueEl = document.getElementById('overdue-alert');
+            if(overdueC > 0) { 
+                overdueEl.classList.remove('hidden'); 
+                document.getElementById('overdue-count').innerText = overdueC; 
+                document.getElementById('overdue-value').innerText = formatRupiah(overdueV); 
+            } else {
+                overdueEl.classList.add('hidden');
+            }
+
+            const todayEl = document.getElementById('today-due-alert');
+            if(todayC > 0) { 
+                todayEl.classList.remove('hidden'); 
+                document.getElementById('today-count').innerText = todayC; 
+                document.getElementById('today-value').innerText = formatRupiah(todayV); 
+            } else {
+                todayEl.classList.add('hidden');
+            }
+
+            // Stats Update
+            document.getElementById('stats-total').innerText = sTotal;
+            document.getElementById('stats-value').innerText = formatRupiah(sValue);
+            document.getElementById('stats-weight').innerText = sWeight.toFixed(1) + " KG";
+            document.getElementById('stats-warning').innerText = sWarning;
+
+            // Filter logic
+            let displayData = [...dataPiutang];
+            const filterInfo = document.getElementById('filter-info');
+            const filterName = document.getElementById('filter-name');
+
+            if(currentFilter !== 'all') {
+                filterInfo.classList.remove('hidden');
+                displayData = displayData.filter(item => {
+                    const isLunas = item.status === 'Lunas';
+                    const diff = Math.ceil((new Date(item.tgl_tempo) - todayDate) / (1000*60*60*24));
+                    if(isLunas) return false;
+                    
+                    if(currentFilter === 'overdue') { filterName.innerText = 'Terlambat'; return diff < 0; }
+                    if(currentFilter === 'today') { filterName.innerText = 'Jatuh Tempo Hari Ini'; return diff === 0; }
+                    if(currentFilter === 'urgent') { filterName.innerText = 'Urgent (≤3 Hari)'; return diff <= 3 && diff > 0; }
+                    return true;
+                });
+            } else {
+                filterInfo.classList.add('hidden');
+            }
+
+            // Render Rows
+            if(displayData.length === 0) {
                 document.getElementById('empty-state').classList.remove('hidden');
             } else {
                 document.getElementById('empty-state').classList.add('hidden');
                 
-                const sorted = [...dataPiutang].sort((a,b) => {
+                const sorted = displayData.sort((a,b) => {
                     let vA = a[currentSort.column], vB = b[currentSort.column];
                     if(currentSort.column.includes('tgl')) { vA = new Date(vA); vB = new Date(vB); }
                     return currentSort.direction === 'asc' ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
@@ -379,15 +460,7 @@
 
                 sorted.forEach(item => {
                     const isLunas = item.status === 'Lunas';
-                    const diff = Math.ceil((new Date(item.tgl_tempo) - new Date(today)) / (1000*60*60*24));
-                    
-                    if(!isLunas) {
-                        sTotal++; sValue += item.harga; sWeight += item.berat;
-                        if(diff <= 3 && diff > 0) sWarning++;
-                        if(diff === 0) { todayC++; todayV += item.harga; }
-                        if(diff < 0) { overdueC++; overdueV += item.harga; }
-                    }
-
+                    const diff = Math.ceil((new Date(item.tgl_tempo) - todayDate) / (1000*60*60*24));
                     const row = document.createElement('tr');
                     const statusClass = isLunas ? 'bg-green-100 text-green-700' : (item.status === 'Menunggu' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700');
                     
@@ -417,21 +490,6 @@
                     tbody.appendChild(row);
                 });
             }
-
-            // Stats Update
-            document.getElementById('stats-total').innerText = sTotal;
-            document.getElementById('stats-value').innerText = formatRupiah(sValue);
-            document.getElementById('stats-weight').innerText = sWeight.toFixed(1) + " KG";
-            document.getElementById('stats-warning').innerText = sWarning;
-
-            // Alert Visibility
-            const overdueEl = document.getElementById('overdue-alert');
-            if(overdueC > 0) { overdueEl.classList.remove('hidden'); document.getElementById('overdue-count').innerText = overdueC; document.getElementById('overdue-value').innerText = formatRupiah(overdueV); }
-            else overdueEl.classList.add('hidden');
-
-            const todayEl = document.getElementById('today-due-alert');
-            if(todayC > 0) { todayEl.classList.remove('hidden'); document.getElementById('today-count').innerText = todayC; document.getElementById('today-value').innerText = formatRupiah(todayV); }
-            else todayEl.classList.add('hidden');
         }
 
         function deleteItem(id) {
@@ -486,6 +544,7 @@
             reader.onload = function(e) {
                 const lines = e.target.result.split('\n');
                 lines.slice(1).forEach(l => {
+                    if(!l.trim()) return;
                     const p = l.split(',').map(v => v.replace(/"/g, ''));
                     if(p.length >= 9) dataPiutang.push({ id: Date.now()+Math.random(), id_unik: p[0], nama_pt: p[1], tgl_beli: p[2], tgl_tempo: p[3], berat: parseFloat(p[4]), harga: parseFloat(p[5]), info: p[6], no_wa: p[7], status: p[8] });
                 });

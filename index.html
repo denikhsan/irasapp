@@ -149,7 +149,24 @@
             </div>
 
             <!-- Table Container -->
-            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 mb-6">
+                <!-- Pagination Control Top -->
+                <div class="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Tampilkan:</span>
+                        <select id="per-page" onchange="changePerPage(this.value)" class="bg-white border border-gray-200 rounded-lg text-xs font-bold p-1 px-2 outline-none focus:ring-2 focus:ring-pink-500">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <div id="pagination-info" class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        Menampilkan 0 - 0 dari 0 data
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-50 text-gray-600 uppercase text-[10px] font-bold tracking-widest desktop-table-header">
@@ -171,10 +188,17 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Empty State -->
                 <div id="empty-state" class="hidden py-20 text-center px-4">
                     <i class="fa-solid fa-folder-open text-5xl text-gray-200 mb-4 block"></i>
                     <h3 class="text-gray-500 font-bold">Tidak ada data</h3>
                     <p class="text-gray-400 text-xs mt-1">Gunakan tombol di atas atau hapus filter untuk melihat data.</p>
+                </div>
+
+                <!-- Pagination Nav Bottom -->
+                <div id="pagination-controls" class="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex justify-center items-center gap-2">
+                    <!-- Nav buttons injected -->
                 </div>
             </div>
         </main>
@@ -266,7 +290,11 @@
         let dataPiutang = [];
         let selectedIds = new Set();
         let currentSort = { column: 'tgl_tempo', direction: 'asc' };
-        let currentFilter = 'all'; // 'all', 'overdue', 'today', 'urgent'
+        let currentFilter = 'all'; 
+        
+        // Pagination States
+        let currentPage = 1;
+        let rowsPerPage = 10;
 
         window.onload = function() {
             dataPiutang = JSON.parse(localStorage.getItem('ira_app_data')) || [];
@@ -281,17 +309,26 @@
         function handleSort(col) {
             if (currentSort.column === col) currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
             else { currentSort.column = col; currentSort.direction = 'asc'; }
+            currentPage = 1; // Reset to page 1 on sort
             renderTable();
         }
 
         function setFilter(type) {
             currentFilter = type;
+            currentPage = 1; // Reset to page 1 on filter
             renderTable();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function resetFilter() {
             currentFilter = 'all';
+            currentPage = 1;
+            renderTable();
+        }
+
+        function changePerPage(val) {
+            rowsPerPage = parseInt(val);
+            currentPage = 1;
             renderTable();
         }
 
@@ -400,24 +437,20 @@
                 }
             });
 
-            // Update Banners Visibility (Always based on actual counts)
+            // Update Banners Visibility
             const overdueEl = document.getElementById('overdue-alert');
             if(overdueC > 0) { 
                 overdueEl.classList.remove('hidden'); 
                 document.getElementById('overdue-count').innerText = overdueC; 
                 document.getElementById('overdue-value').innerText = formatRupiah(overdueV); 
-            } else {
-                overdueEl.classList.add('hidden');
-            }
+            } else { overdueEl.classList.add('hidden'); }
 
             const todayEl = document.getElementById('today-due-alert');
             if(todayC > 0) { 
                 todayEl.classList.remove('hidden'); 
                 document.getElementById('today-count').innerText = todayC; 
                 document.getElementById('today-value').innerText = formatRupiah(todayV); 
-            } else {
-                todayEl.classList.add('hidden');
-            }
+            } else { todayEl.classList.add('hidden'); }
 
             // Stats Update
             document.getElementById('stats-total').innerText = sTotal;
@@ -426,46 +459,79 @@
             document.getElementById('stats-warning').innerText = sWarning;
 
             // Filter logic
-            let displayData = [...dataPiutang];
+            let filteredData = [...dataPiutang];
             const filterInfo = document.getElementById('filter-info');
             const filterName = document.getElementById('filter-name');
 
             if(currentFilter !== 'all') {
                 filterInfo.classList.remove('hidden');
-                displayData = displayData.filter(item => {
+                filteredData = filteredData.filter(item => {
                     const isLunas = item.status === 'Lunas';
                     const diff = Math.ceil((new Date(item.tgl_tempo) - todayDate) / (1000*60*60*24));
                     if(isLunas) return false;
-                    
                     if(currentFilter === 'overdue') { filterName.innerText = 'Terlambat'; return diff < 0; }
                     if(currentFilter === 'today') { filterName.innerText = 'Jatuh Tempo Hari Ini'; return diff === 0; }
                     if(currentFilter === 'urgent') { filterName.innerText = 'Urgent (≤3 Hari)'; return diff <= 3 && diff > 0; }
                     return true;
                 });
-            } else {
-                filterInfo.classList.add('hidden');
-            }
+            } else { filterInfo.classList.add('hidden'); }
+
+            // Sorting
+            filteredData.sort((a,b) => {
+                let vA = a[currentSort.column], vB = b[currentSort.column];
+                if(currentSort.column.includes('tgl')) { vA = new Date(vA); vB = new Date(vB); }
+                return currentSort.direction === 'asc' ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
+            });
+
+            // Pagination Logic
+            const totalData = filteredData.length;
+            const totalPages = Math.ceil(totalData / rowsPerPage);
+            if(currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+            
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, totalData);
+            const paginatedData = filteredData.slice(startIndex, endIndex);
+
+            // Update UI Pagination Info
+            document.getElementById('pagination-info').innerText = totalData > 0 
+                ? `Menampilkan ${startIndex + 1} - ${endIndex} dari ${totalData} data`
+                : `Menampilkan 0 data`;
+
+            renderPaginationNav(totalPages);
 
             // Render Rows
-            if(displayData.length === 0) {
+            if(paginatedData.length === 0) {
                 document.getElementById('empty-state').classList.remove('hidden');
             } else {
                 document.getElementById('empty-state').classList.add('hidden');
                 
-                const sorted = displayData.sort((a,b) => {
-                    let vA = a[currentSort.column], vB = b[currentSort.column];
-                    if(currentSort.column.includes('tgl')) { vA = new Date(vA); vB = new Date(vB); }
-                    return currentSort.direction === 'asc' ? (vA > vB ? 1 : -1) : (vA < vB ? 1 : -1);
-                });
-
-                sorted.forEach(item => {
+                paginatedData.forEach(item => {
                     const isLunas = item.status === 'Lunas';
                     const diff = Math.ceil((new Date(item.tgl_tempo) - todayDate) / (1000*60*60*24));
                     const row = document.createElement('tr');
-                    const statusClass = isLunas ? 'bg-green-100 text-green-700' : (item.status === 'Menunggu' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700');
+                    
+                    let statusClass = 'bg-gray-100 text-gray-700';
+                    let statusIcon = '';
+
+                    if(isLunas) {
+                        statusClass = 'bg-green-100 text-green-700';
+                    } else if(item.status === 'Menunggu') {
+                        statusClass = 'bg-amber-100 text-amber-700';
+                    } else {
+                        statusClass = 'bg-red-100 text-red-700';
+                    }
+
+                    // Tambahkan ikon peringatan berdasarkan kondisi tempo
+                    if(!isLunas) {
+                        if(diff < 0) {
+                            statusIcon = '<i class="fa-solid fa-circle-exclamation ml-1 text-red-600 animate-pulse"></i>';
+                        } else if(diff === 0) {
+                            statusIcon = '<i class="fa-solid fa-triangle-exclamation ml-1 text-amber-600"></i>';
+                        }
+                    }
                     
                     row.innerHTML = `
-                        <td class="px-6 py-4" data-label="Pilih"><input type="checkbox" value="${item.id}" class="row-checkbox custom-checkbox" onchange="toggleRowSelection(this)"></td>
+                        <td class="px-6 py-4" data-label="Pilih"><input type="checkbox" value="${item.id}" ${selectedIds.has(item.id) ? 'checked' : ''} class="row-checkbox custom-checkbox" onchange="toggleRowSelection(this)"></td>
                         <td class="px-4 py-4 text-center font-mono text-[10px] font-bold text-gray-400" data-label="ID">${item.id_unik}</td>
                         <td class="px-6 py-4" data-label="Pelanggan">
                             <div class="font-bold text-gray-800">${item.nama_pt}</div>
@@ -477,7 +543,10 @@
                         <td class="px-6 py-4 text-right font-bold text-gray-700" data-label="Harga">${formatRupiah(item.harga)}</td>
                         <td class="px-6 py-4 text-center font-black ${diff < 0 && !isLunas ? 'text-red-600 underline' : ''}" data-label="Tempo">${item.tgl_tempo}</td>
                         <td class="px-6 py-4" data-label="Status">
-                            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${statusClass}">${item.status}</span>
+                            <div class="flex items-center">
+                                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${statusClass}">${item.status}</span>
+                                ${statusIcon}
+                            </div>
                         </td>
                         <td class="px-6 py-4" data-label="Aksi">
                             <div class="flex gap-1 justify-center">
@@ -490,6 +559,44 @@
                     tbody.appendChild(row);
                 });
             }
+        }
+
+        function renderPaginationNav(totalPages) {
+            const nav = document.getElementById('pagination-controls');
+            nav.innerHTML = '';
+            if(totalPages <= 1) return;
+
+            // Prev Button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = `w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-bold transition ${currentPage === 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-300 hover:bg-gray-100'}`;
+            prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+            prevBtn.onclick = () => { if(currentPage > 1) { currentPage--; renderTable(); }};
+            nav.appendChild(prevBtn);
+
+            // Page numbers (Simple logic)
+            for(let i=1; i<=totalPages; i++) {
+                if(totalPages > 5 && (i > 3 && i < totalPages)) {
+                    if(i === 4) {
+                        const dots = document.createElement('span');
+                        dots.innerText = '...';
+                        dots.className = 'text-gray-400 text-xs px-2';
+                        nav.appendChild(dots);
+                    }
+                    continue;
+                }
+                const pBtn = document.createElement('button');
+                pBtn.className = `w-8 h-8 rounded-lg text-xs font-black transition ${currentPage === i ? 'bg-pink-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`;
+                pBtn.innerText = i;
+                pBtn.onclick = () => { currentPage = i; renderTable(); };
+                nav.appendChild(pBtn);
+            }
+
+            // Next Button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = `w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-bold transition ${currentPage === totalPages ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-300 hover:bg-gray-100'}`;
+            nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+            nextBtn.onclick = () => { if(currentPage < totalPages) { currentPage++; renderTable(); }};
+            nav.appendChild(nextBtn);
         }
 
         function deleteItem(id) {
@@ -533,24 +640,49 @@
         }
 
         function exportCSV() {
-            let csv = "ID,Nama PT,Tgl Beli,Tempo,Berat,Harga,Jenis,WA,Status\n";
+            // SEP=, Memberitahu Excel untuk memisahkan kolom dengan koma secara otomatis
+            let csv = "SEP=,\n"; 
+            csv += "ID,Nama PT,Tgl Beli,Tempo,Berat,Harga,Jenis,WA,Status\n";
             dataPiutang.forEach(d => csv += `"${d.id_unik}","${d.nama_pt}","${d.tgl_beli}","${d.tgl_tempo}",${d.berat},${d.harga},"${d.info}","${d.no_wa}","${d.status}"\n`);
-            const blob = new Blob([csv], {type: 'text/csv'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'data_piutang.csv'; a.click();
+            
+            // Menggunakan Blob dengan BOM agar karakter UTF-8 terbaca benar di Excel
+            const blob = new Blob(["\ufeff" + csv], {type: 'text/csv;charset=utf-8;'});
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `data_piutang_${new Date().toISOString().split('T')[0]}.csv`; 
+            a.click();
         }
 
         function importCSV(input) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const lines = e.target.result.split('\n');
-                lines.slice(1).forEach(l => {
+                let startRow = 0;
+                
+                // Lewati baris SEP= jika ada
+                if (lines[0].startsWith('SEP=')) startRow = 1;
+
+                lines.slice(startRow + 1).forEach(l => {
                     if(!l.trim()) return;
                     const p = l.split(',').map(v => v.replace(/"/g, ''));
-                    if(p.length >= 9) dataPiutang.push({ id: Date.now()+Math.random(), id_unik: p[0], nama_pt: p[1], tgl_beli: p[2], tgl_tempo: p[3], berat: parseFloat(p[4]), harga: parseFloat(p[5]), info: p[6], no_wa: p[7], status: p[8] });
+                    if(p.length >= 9) {
+                        dataPiutang.push({ 
+                            id: Date.now()+Math.random().toString(), 
+                            id_unik: p[0], 
+                            nama_pt: p[1], 
+                            tgl_beli: p[2], 
+                            tgl_tempo: p[3], 
+                            berat: parseFloat(p[4]) || 0, 
+                            harga: parseFloat(p[5]) || 0, 
+                            info: p[6], 
+                            no_wa: p[7], 
+                            status: p[8] 
+                        });
+                    }
                 });
                 localStorage.setItem('ira_app_data', JSON.stringify(dataPiutang));
                 renderTable();
-                showToast("Import Berhasil", "fa-solid fa-file-import");
+                showToast("Import Berhasil", "fa-solid fa-file-import text-blue-400");
             };
             reader.readAsText(input.files[0]);
         }
